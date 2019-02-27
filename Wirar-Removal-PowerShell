@@ -1,0 +1,58 @@
+# Created By Alejandro loaiza
+
+# Detecting rule: assuming that clients have installed Winrar to the standard default location.
+$source = "C:\Program Files\WinRAR\Uninstall.exe"
+$detection = Test-path $source -pathtype leaf
+$callUninstall = Invoke-Command -ScriptBlock { "`"$source`" /S" };
+$softDir = "C:\Program Files\WinRAR"
+
+if ($detection){
+    #Detecting if WinRar exist on computer.
+    Write-Host "WinRAR detected, uninstalling now!" -ForegroundColor Yellow `n;
+    $callUninstall
+    Write-Host "WinRAR has been removed. Checking if winRAR directory still exists" `n;
+
+    # Check if winRAR directory exists.
+    If (Test-Path -Path $softdir -PathType Container){
+        Write-Host "WinRAR directory exists at $softDir, removing now"
+        try {
+            Remove-Item -path $softDir -Recurse -ErrorAction SilentlyContinue
+        }
+        catch [System.UnauthorizedAccessException] {
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName  
+            Write-Host $Error[0].Exception `n;
+            Write-Host "Script failed because: We failed to read file $FailedItem. The error message was $ErrorMessage" -ForegroundColor Red `n
+            exit (1)
+            break
+        }
+        Finally{
+            Write-Host "Directory Has been removed" -ForegroundColor Green `n;
+        }
+
+    } else {
+        Write-Host "WinRAR directory not found" -ForegroundColor Green `n;
+    }
+
+#Assuming WinRAR was removed, but directory left behind on computer.    
+} elseif (Test-Path -Path $softdir -PathType Container) {
+    Write-Host "$softdir It seems that WinRAR has been removed and the directory left behind, removing directory." -ForegroundColor Yellow `n;
+    try {
+        Remove-Item -path $softDir -Recurse -ErrorAction SilentlyContinue
+    }
+    catch [System.UnauthorizedAccessException] {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName  
+        Write-Host $Error[0].Exception `n;
+        Write-Host "Script failed because: We failed to read file $FailedItem. The error message was $ErrorMessage" -ForegroundColor Red `n
+        exit (1)
+        break
+    }
+    Finally{
+        Write-Host "WinRAR directory Has been removed" -ForegroundColor Green `n;
+    }
+
+} else {
+    Write-Host "WinRAR was not detected" -ForegroundColor Green `n;
+}
+
